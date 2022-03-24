@@ -7,3 +7,14 @@ Passos para execução do arquivo SMV:
 2º -> Em seguida o prompt deve ser aberto nesta pasta, com a sintaxe: NuSMV arquivo.smv;
 
 3º -> A execução do programa retornará a validação das propriedades verificadas.
+
+
+
+
+
+
+
+
+Referências:
+
+https://docs.github.com/pt/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax
