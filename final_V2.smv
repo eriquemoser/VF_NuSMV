@@ -1,0 +1,110 @@
+MODULE main 
+VAR 
+	valvula :  {VI,VO,VC,VPOC};
+	movimento : {ocp,ot,ct,re};
+	controlador : {CI,CSP,CDD,CDR,CUD,CUR};
+	nivel : {nsp,ndd,ndr,nud,nur,re};
+	
+ASSIGN
+	next(valvula):=	case
+			valvula=VI & movimento=ot : VO;
+			valvula=VI & movimento=ocp : VPOC;
+			valvula=VI & movimento=ct : VC;
+			valvula=VO & movimento=re : VI;
+			valvula=VO & movimento=ot : VO;
+			valvula=VO & movimento=ct : VC;
+			valvula=VO & movimento=ocp : VPOC;
+			valvula=VPOC & movimento=ocp : VPOC;
+			valvula=VPOC & movimento=re : VI;
+			valvula=VPOC & movimento=ot : VO;
+			valvula=VPOC & movimento=ct : VC;
+			valvula=VC & movimento=ct : VC;
+			valvula=VC & movimento=re : VI;
+			valvula=VC & movimento=ot : VO;
+			valvula=VC & movimento=ocp : VPOC;
+			TRUE : {VI,VO,VC,VPOC};
+					esac;
+					
+		next(controlador):=	case
+			controlador=CI & nivel=nur : CUR;
+			controlador=CI & nivel=nud : CUD;
+			controlador=CI & nivel=ndr : CDR;
+			controlador=CI & nivel=ndd : CDD;
+			controlador=CI & nivel=nsp : CSP;
+			controlador=CSP & nivel=nsp : CSP;
+			controlador=CSP & nivel=re : CI;
+			controlador=CSP & nivel=ndd : CDD;
+			controlador=CSP & nivel=nur : CUR;
+			controlador=CUR & (movimento=ocp | movimento=ot) : CUR;
+			controlador=CUR & nivel=re : CI;
+			controlador=CUR & nivel=nud : CUD;
+			controlador=CUR & nivel=nsp : CSP;
+			controlador=CUD & (movimento=ocp | movimento=ot) : CUD;
+			controlador=CUD & nivel=re : CI;
+			controlador=CUD & nivel=nur : CUR;
+			controlador=CUD & nivel=ndd : CDD;
+			controlador=CUD & nivel=nsp : CSP;
+			controlador=CDD & (movimento=ocp | movimento=ct) : CDD;
+			controlador=CDD & nivel=re : CI;
+			controlador=CDD & nivel=nsp : CSP;
+			controlador=CDD & nivel=ndr : CDR;
+			controlador=CDR & (movimento=ocp | movimento=ct) : CDR;
+			controlador=CDR & nivel=re : CI;
+			controlador=CDR & nivel=ndd : CDD;
+			controlador=CDR & nivel=nsp : CSP;
+			controlador=CDR & nivel=nur : CUR;
+			TRUE : {CI,CSP,CDD,CDR,CUD,CUR};
+					esac;
+	
+	init(valvula) 		:= VI;
+	init(controlador)	:= CI;
+
+
+--Propriedades da Lógica Temporal:
+
+--*************acessibilidade***********************
+--diz que alguma situação pode ser alcançada
+--("O controlador sempre pode retornar ao SetPoint")
+SPEC AG (EF controlador=CSP)
+
+--("nao podemos ter um estado de nível subindo e uma válvula fechada")
+SPEC !EF (nivel=nur & valvula=VC)
+
+--("sempre podemos retornar para uma condição inicial")
+SPEC AG EF (controlador=CI & valvula=VI)
+
+--("Verifica se no futuro cada um dos estados serão alcançados um dia")
+SPEC AG EF ((controlador=CI | controlador=CSP | controlador=CDD | controlador=CDR |
+ controlador=CUD | controlador=CUR))
+
+--*************seguranca***********************
+--diz que um evento nunca pode ocorrer
+--("desde que a válvula não esteja fechada, o nível do tanque não sobe")
+SPEC A[(!(nivel=nur)) U (valvula=VC)]
+
+--("a valvula e o controlador serem resetados nunca ocorrerá)
+SPEC AG !((movimento=re) & (nivel=re))
+	
+--*************vivacidade***********************	
+--diz que sob certas condições, algum evento acabará por ocorrer
+--("se a válvula abrir, o nível do tanque vai abaixar eventualmente")
+SPEC AG(movimento=ot -> EF nivel=ndd)
+
+--("verifica se um determinado estado do controlador não vai ocorrer sempre")
+SPEC AG ((controlador=CI -> EF !(controlador=CI)) & (controlador=CSP -> EF !(controlador=CSP)) & 
+	(controlador=CDD -> EF !(controlador=CDD)) & (controlador=CDR -> EF !(controlador=CDR)) & 
+	(controlador=CUD -> EF !(controlador=CUD)) & (controlador=CUR -> EF !(controlador=CUR))) 
+
+--*************liberdade de deadlock***********************	
+--diz que algum evento indesejável nunca ocorrerá
+--("qualquer que seja o estado alcançado, existirá um sucessor imediato")
+SPEC AG EX TRUE
+
+--*************justiça***********************
+--sob certas condições, um evento ocorrerá (ou deixará de ocorrer) indefinidamente
+--("o nível do tanque subirá infinitamente frequentemente")
+SPEC AG AF (nivel=nur)
+--("o nível do tanque descerá infinitamente frequentemente")
+SPEC AG AF (nivel=ndd)
+
+
